@@ -47,6 +47,7 @@ namespace Zebra_MP7000_OPOS
 
                 if (scanner?.Claimed == true || scale?.Claimed == true)
                 {
+                    NamedPipesServer.StartNamedPipeServer();
                     Console.WriteLine("\nDevice(s) ready. Scanner: scan barcodes | Scale: live weight monitoring");
                     Console.WriteLine("Press Ctrl+C to exit");
 
@@ -153,6 +154,8 @@ namespace Zebra_MP7000_OPOS
             try
             {
                 Console.WriteLine($"\n[SCAN] {scanner.ScanDataLabel}");
+                NamedPipesServer.pipeWriter?.WriteLine($"SCAN:{scanner.ScanDataLabel}");
+
                 scanner.DataEventEnabled = true;
             }
             catch (Exception ex)
@@ -168,6 +171,9 @@ namespace Zebra_MP7000_OPOS
             if (value == (int)OPOSScaleConstants.SCAL_SUE_STABLE_WEIGHT)
             {
                 Console.WriteLine(WeightFormat(scale.ScaleLiveWeight));
+                NamedPipesServer.pipeWriter?.WriteLine($"WEIGHT:{WeightFormat(scale.ScaleLiveWeight)}");
+
+
             }
             else if (value == (int)OPOSScaleConstants.SCAL_SUE_WEIGHT_UNSTABLE)
             {
@@ -176,6 +182,7 @@ namespace Zebra_MP7000_OPOS
             else if (value == (int)OPOSScaleConstants.SCAL_SUE_WEIGHT_ZERO)
             {
                 Console.WriteLine(WeightFormat(scale.ScaleLiveWeight));
+                NamedPipesServer.pipeWriter?.WriteLine($"WEIGHT:{WeightFormat(scale.ScaleLiveWeight)}");
             }
             else if (value == (int)OPOSScaleConstants.SCAL_SUE_WEIGHT_OVERWEIGHT)
             {
