@@ -152,7 +152,7 @@ namespace Zebra_MP7000_OPOS
         {
             try
             {
-                Console.WriteLine($"\n[SCAN] {scanner.ScanData}");
+                Console.WriteLine($"\n[SCAN] {scanner.ScanDataLabel}");
                 scanner.DataEventEnabled = true;
             }
             catch (Exception ex)
