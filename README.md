@@ -16,11 +16,10 @@ It can work with other scanner/scales from other manufacturers, but it has only 
 
 ---
 
-## 🛠 Requirements
+## 🛠 Requirements to build
 
 - **Windows OS**
 - [.NET Framework 4.7.2+]
 - **OPOS Common Control Objects (CCO) v1.14**
   - Download from [1.14.001 CCO Installer (Windows Installer MSI)](http://monroecs.com/oposccos_current.htm)
-- Zebra scanner/scale with OPOS drivers installed
 ---
