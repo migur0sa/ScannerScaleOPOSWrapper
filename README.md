@@ -2,7 +2,7 @@
 
 A lightweight C# program that interfaces with Zebra scanner and scale devices using the OPOS standard. This project exposes **live weight data** and **scanned barcode values** via **named pipes**, enabling seamless integration with external applications (e.g., Python, Node.js, etc.).
 
-It can work with other scales from other manufacturers, but it has only been tested with Zebra devices for now.
+It can work with other scanner/scales from other manufacturers, but it has only been tested with Zebra devices for now.
 
 ---
 
