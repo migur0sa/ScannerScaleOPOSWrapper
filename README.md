@@ -1,6 +1,8 @@
-# 🧭 Zebra Scanner/Scale OPOS Named Pipe Wrapper
+# 🧭 Zebra Scanner/Scale OPOS Named Pipe Program
 
-A lightweight C# program that interfaces with Zebra MP7000 scanner and scale devices using the OPOS standard. This project exposes **live weight data** and **scanned barcode values** via **named pipes**, enabling seamless integration with external applications (e.g., Python, Node.js, etc.).
+A lightweight C# program that interfaces with Zebra scanner and scale devices using the OPOS standard. This project exposes **live weight data** and **scanned barcode values** via **named pipes**, enabling seamless integration with external applications (e.g., Python, Node.js, etc.).
+
+It can work with other scales from other manufacturers, but it has only been tested with Zebra devices for now.
 
 ---
 
@@ -17,10 +19,8 @@ A lightweight C# program that interfaces with Zebra MP7000 scanner and scale dev
 ## 🛠 Requirements
 
 - **Windows OS**
-- [.NET Framework 4.7.2+](https://dotnet.microsoft.com/en-us/download/dotnet-framework)
+- [.NET Framework 4.7.2+]
 - **OPOS Common Control Objects (CCO) v1.14**
-  - Download from [UnifiedPOS CCO](https://monroecs.com/oposccos.htm)
-- Zebra MP7000 scanner/scale with OPOS drivers installed
-- Administrator privileges (required for device claiming)
-
+  - Download from [1.14.001 CCO Installer (Windows Installer MSI)](http://monroecs.com/oposccos_current.htm)
+- Zebra scanner/scale with OPOS drivers installed
 ---
