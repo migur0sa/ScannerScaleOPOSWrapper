@@ -5,7 +5,7 @@ using OposScanner_CCO;
 using OposScale_CCO;
 using OPOSCONSTANTSLib;
 
-namespace Zebra_MP7000_OPOS
+namespace Zebra_Scanner_Scale_OPOS
 {
     class Program
     {
@@ -154,7 +154,7 @@ namespace Zebra_MP7000_OPOS
             try
             {
                 Console.WriteLine($"\n[SCAN] {scanner.ScanDataLabel}");
-                NamedPipesServer.pipeWriter?.WriteLine($"SCAN:{scanner.ScanDataLabel}");
+                NamedPipesServer.SendDataToClient($"SCAN:{scanner.ScanDataLabel}");
 
                 scanner.DataEventEnabled = true;
             }
@@ -182,7 +182,7 @@ namespace Zebra_MP7000_OPOS
             else if (value == (int)OPOSScaleConstants.SCAL_SUE_WEIGHT_ZERO)
             {
                 Console.WriteLine(WeightFormat(scale.ScaleLiveWeight));
-                NamedPipesServer.pipeWriter?.WriteLine($"WEIGHT:{WeightFormat(scale.ScaleLiveWeight)}");
+                NamedPipesServer.SendDataToClient($"WEIGHT:{WeightFormat(scale.ScaleLiveWeight)}");
             }
             else if (value == (int)OPOSScaleConstants.SCAL_SUE_WEIGHT_OVERWEIGHT)
             {

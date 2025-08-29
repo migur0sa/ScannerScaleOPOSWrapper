@@ -1,16 +1,16 @@
 ﻿using System;
-using System.Linq;
-using System.Text;
-using System.IO.Pipes;
 using System.IO;
+using System.IO.Pipes;
+using System.Text;
+using System.Threading.Tasks;
 
-
-namespace Zebra_MP7000_OPOS
+namespace Zebra_Scanner_Scale_OPOS
 {
     class NamedPipesServer
     {
-        internal static NamedPipeServerStream pipeServer;
+        private static NamedPipeServerStream pipeServer;
         internal static StreamWriter pipeWriter;
+        private static readonly object pipeLock = new object();
         private static bool isServerRunning = false;
 
         internal static void StartNamedPipeServer()
@@ -21,37 +21,89 @@ namespace Zebra_MP7000_OPOS
                 return;
             }
 
-            try
-            {
-                pipeServer = new NamedPipeServerStream("ZebraScannerScalePipe", PipeDirection.Out, 1, PipeTransmissionMode.Message, PipeOptions.Asynchronous);
-                Console.WriteLine("Waiting for pipe client...");
+            // Start the server in a background task
+            Task.Run(() => ListenForConnections());
+        }
 
-                // This will block until a client connects.
-                // You might want to run this in a separate thread/Task.
-                pipeServer.WaitForConnection();
-
-                pipeWriter = new StreamWriter(pipeServer, Encoding.UTF8) { AutoFlush = true };
-                isServerRunning = true;
-                Console.WriteLine("Pipe client connected.");
-            }
-            catch (Exception ex)
+        private static void ListenForConnections()
+        {
+            isServerRunning = true;
+            while (true)
             {
-                Console.WriteLine($"An error occurred during server startup: {ex.Message}");
-                // Clean up resources on failure
-                pipeWriter?.Dispose();
-                pipeServer?.Dispose();
-                isServerRunning = false;
+                // Create a new pipe server instance for each connection
+                NamedPipeServerStream currentPipeServer = null;
+                try
+                {
+                    currentPipeServer = new NamedPipeServerStream("ZebraScannerScalePipe", PipeDirection.Out, NamedPipeServerStream.MaxAllowedServerInstances, PipeTransmissionMode.Message, PipeOptions.Asynchronous);
+                    Console.WriteLine("Waiting for pipe client...");
+
+                    currentPipeServer.WaitForConnection();
+                    Console.WriteLine("Pipe client connected.");
+
+                    // Safely update the shared pipe objects under a lock
+                    lock (pipeLock)
+                    {
+                        // Dispose of previous connections if they exist
+                        pipeWriter?.Dispose();
+                        pipeServer?.Dispose();
+
+                        pipeServer = currentPipeServer;
+                        pipeWriter = new StreamWriter(pipeServer, Encoding.UTF8) { AutoFlush = true };
+                    }
+                }
+                catch (IOException ex)
+                {
+                    Console.WriteLine($"An IO exception occurred: {ex.Message}");
+                }
+                catch (ObjectDisposedException)
+                {
+                    Console.WriteLine("Server pipe was disposed unexpectedly.");
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"An unexpected error occurred in the server loop: {ex.Message}");
+                }
+                finally
+                {
+                    // Ensure the temporary pipe server is disposed if an error occurred before the lock was taken
+                    if (currentPipeServer != null && currentPipeServer != pipeServer)
+                    {
+                        currentPipeServer.Dispose();
+                    }
+                }
             }
         }
 
-        // Add a method to handle client disconnection and cleanup
-        internal static void DisconnectAndRestart()
+        internal static void SendDataToClient(string data)
         {
-            Console.WriteLine("Client disconnected. Cleaning up and restarting server.");
-            pipeWriter?.Dispose();
-            pipeServer?.Dispose();
-            isServerRunning = false;
-            StartNamedPipeServer(); // Restart the server
+            // Use a lock to ensure thread-safe access to the pipe objects
+            lock (pipeLock)
+            {
+                try
+                {
+                    if (pipeWriter != null && pipeServer != null && pipeServer.IsConnected)
+                    {
+                        pipeWriter.WriteLine(data);
+                        Console.WriteLine($"Sent: {data}");
+                    }
+                    else
+                    {
+                        Console.WriteLine("Pipe is not connected. Message not sent.");
+                    }
+                }
+                catch (IOException ex)
+                {
+                    Console.WriteLine($"Error writing to pipe: {ex.Message}. Client has likely disconnected.");
+                }
+                catch (ObjectDisposedException)
+                {
+                    Console.WriteLine("Pipe writer is disposed. Client has disconnected.");
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"An unexpected error occurred while writing: {ex.Message}");
+                }
+            }
         }
     }
 }
