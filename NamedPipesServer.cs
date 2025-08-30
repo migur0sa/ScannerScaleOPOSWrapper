@@ -3,8 +3,9 @@ using System.IO;
 using System.IO.Pipes;
 using System.Text;
 using System.Threading.Tasks;
+using static Scanner_Scale_OPOS_Wrapper.Constants;
 
-namespace Zebra_Scanner_Scale_OPOS
+namespace Scanner_Scale_OPOS_Wrapper
 {
     class NamedPipesServer
     {
@@ -17,7 +18,7 @@ namespace Zebra_Scanner_Scale_OPOS
         {
             if (isServerRunning)
             {
-                Console.WriteLine("Server is already running.");
+                Logger.Log("Server is already running.", MessageType.normal);
                 return;
             }
 
@@ -34,11 +35,17 @@ namespace Zebra_Scanner_Scale_OPOS
                 NamedPipeServerStream currentPipeServer = null;
                 try
                 {
-                    currentPipeServer = new NamedPipeServerStream("ZebraScannerScalePipe", PipeDirection.Out, NamedPipeServerStream.MaxAllowedServerInstances, PipeTransmissionMode.Message, PipeOptions.Asynchronous);
-                    Console.WriteLine("Waiting for pipe client...");
+                    currentPipeServer = new NamedPipeServerStream(
+                        "ScannerScaleOPOSPipe",
+                        PipeDirection.Out,
+                        NamedPipeServerStream.MaxAllowedServerInstances,
+                        PipeTransmissionMode.Message,
+                        PipeOptions.Asynchronous
+                    );
+                    Logger.Log("Waiting for pipe client...", MessageType.normal);
 
                     currentPipeServer.WaitForConnection();
-                    Console.WriteLine("Pipe client connected.");
+                    Logger.Log("Pipe client connected.", MessageType.normal);
 
                     // Safely update the shared pipe objects under a lock
                     lock (pipeLock)
@@ -48,20 +55,32 @@ namespace Zebra_Scanner_Scale_OPOS
                         pipeServer?.Dispose();
 
                         pipeServer = currentPipeServer;
-                        pipeWriter = new StreamWriter(pipeServer, Encoding.UTF8) { AutoFlush = true };
+                        pipeWriter = new StreamWriter(pipeServer, Encoding.UTF8)
+                        {
+                            AutoFlush = true,
+                        };
                     }
                 }
                 catch (IOException ex)
                 {
-                    Console.WriteLine($"An IO exception occurred: {ex.Message}");
+                    Logger.Log(
+                        $"An IO exception occurred: {ex.Message}",
+                        MessageType.namedPipes_error
+                    );
                 }
                 catch (ObjectDisposedException)
                 {
-                    Console.WriteLine("Server pipe was disposed unexpectedly.");
+                    Logger.Log(
+                        "Server pipe was disposed unexpectedly.",
+                        MessageType.namedPipes_error
+                    );
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"An unexpected error occurred in the server loop: {ex.Message}");
+                    Logger.Log(
+                        $"An unexpected error occurred in the server loop: {ex.Message}",
+                        MessageType.namedPipes_error
+                    );
                 }
                 finally
                 {
@@ -84,24 +103,35 @@ namespace Zebra_Scanner_Scale_OPOS
                     if (pipeWriter != null && pipeServer != null && pipeServer.IsConnected)
                     {
                         pipeWriter.WriteLine(data);
-                        Console.WriteLine($"Sent: {data}");
                     }
                     else
                     {
-                        Console.WriteLine("Pipe is not connected. Message not sent.");
+                        Logger.Log(
+                            "Pipe is not connected. Message not sent.",
+                            MessageType.namedPipes_error
+                        );
                     }
                 }
                 catch (IOException ex)
                 {
-                    Console.WriteLine($"Error writing to pipe: {ex.Message}. Client has likely disconnected.");
+                    Logger.Log(
+                        $"Error writing to pipe: {ex.Message}. Client has likely disconnected.",
+                        MessageType.namedPipes_error
+                    );
                 }
                 catch (ObjectDisposedException)
                 {
-                    Console.WriteLine("Pipe writer is disposed. Client has disconnected.");
+                    Logger.Log(
+                        "Pipe writer is disposed. Client has disconnected.",
+                        MessageType.namedPipes_error
+                    );
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"An unexpected error occurred while writing: {ex.Message}");
+                    Logger.Log(
+                        $"An unexpected error occurred while writing: {ex.Message}",
+                        MessageType.namedPipes_error
+                    );
                 }
             }
         }

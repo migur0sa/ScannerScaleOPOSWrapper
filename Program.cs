@@ -1,20 +1,24 @@
 ﻿using System;
-using System.Runtime.InteropServices;
+using System.Diagnostics.Eventing.Reader;
 using System.Threading;
-using OposScanner_CCO;
-using OposScale_CCO;
 using OPOSCONSTANTSLib;
+using OposScale_CCO;
+using OposScanner_CCO;
+using static Scanner_Scale_OPOS_Wrapper.Constants;
 
-namespace Zebra_Scanner_Scale_OPOS
+namespace Scanner_Scale_OPOS_Wrapper
 {
     class Program
     {
         private static OPOSScanner scanner;
         private static OPOSScale scale;
-        private static bool scaleEnabled = false;
 
         static void Main(string[] args)
         {
+            // Read INI configuration
+            INI ini = new INI();
+            Logger.debug = ini.Debug;
+
             var exitEvent = new ManualResetEvent(false);
             Console.CancelKeyPress += (sender, eventArgs) =>
             {
@@ -25,32 +29,41 @@ namespace Zebra_Scanner_Scale_OPOS
             try
             {
                 // Initialize Scanner
-                if (InitializeScanner())
+                if (InitializeScanner(ini))
                 {
-                    Console.WriteLine("Scanner initialized successfully");
+                    Logger.Log("Scanner initialized successfully", MessageType.normal);
                 }
                 else
                 {
-                    Console.WriteLine("Scanner initialization failed");
+                    Logger.Log("Scanner initialization failed", MessageType.scanner_error);
                 }
 
                 // Initialize Scale
-                if (InitializeScale())
+                if (ini.ScaleEnabled == 1 && InitializeScale(ini))
                 {
-                    Console.WriteLine("Scale initialized successfully");
-                    scaleEnabled = true;
+                    Logger.Log("Scale initialized successfully", MessageType.normal);
                 }
                 else
                 {
-                    Console.WriteLine("Scale initialization failed");
+                    Logger.Log("Scale initialization failed", MessageType.scale_error);
                 }
 
                 if (scanner?.Claimed == true || scale?.Claimed == true)
                 {
                     NamedPipesServer.StartNamedPipeServer();
-                    Console.WriteLine("\nDevice(s) ready. Scanner: scan barcodes | Scale: live weight monitoring");
-                    Console.WriteLine("Press Ctrl+C to exit");
-
+                    if (ini.ScaleEnabled == 1)
+                    {
+                        Logger.Log(
+                            "\nDevice(s) ready. Scanner: scan barcodes | Scale: live weight monitoring",
+                            MessageType.normal
+                        );
+                        Logger.Log("Press Ctrl+C to exit", MessageType.normal);
+                    }
+                    else
+                    {
+                        Logger.Log("\nDevice(s) ready. Scanner: scan barcodes", MessageType.normal);
+                        Logger.Log("Press Ctrl+C to exit", MessageType.normal);
+                    }
                     // Wait for exit event
                     exitEvent.WaitOne();
 
@@ -60,7 +73,7 @@ namespace Zebra_Scanner_Scale_OPOS
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error: {ex.Message}");
+                Logger.Log($"Error: {ex.Message}", MessageType.misc);
             }
             finally
             {
@@ -68,24 +81,24 @@ namespace Zebra_Scanner_Scale_OPOS
             }
         }
 
-        static bool InitializeScanner()
+        static bool InitializeScanner(INI ini)
         {
             try
             {
                 Type scannerType = Type.GetTypeFromProgID("OPOS.Scanner");
                 scanner = (OPOSScanner)Activator.CreateInstance(scannerType);
 
-                int result = scanner.Open("ZEBRA_SCANNER");
+                int result = scanner.Open(ini.ScannerLogicalName);
                 if (result != 0)
                 {
-                    Console.WriteLine($"Failed to open scanner: {result}");
+                    Logger.Log($"Failed to open scanner: {result}", MessageType.scanner_error);
                     return false;
                 }
 
                 result = scanner.ClaimDevice(1000);
                 if (result != 0)
                 {
-                    Console.WriteLine($"Failed to claim scanner: {result}");
+                    Logger.Log($"Failed to claim scanner: {result}", MessageType.scanner_error);
                     return false;
                 }
 
@@ -100,29 +113,32 @@ namespace Zebra_Scanner_Scale_OPOS
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Scanner initialization error: {ex.Message}");
+                Logger.Log(
+                    $"Scanner initialization error: {ex.Message}",
+                    MessageType.scanner_error
+                );
             }
             return false;
         }
 
-        static bool InitializeScale()
+        static bool InitializeScale(INI ini)
         {
             try
             {
                 Type scaleType = Type.GetTypeFromProgID("OPOS.Scale");
                 scale = (OPOSScale)Activator.CreateInstance(scaleType);
 
-                int result = scale.Open("ZEBRA_SCALE");
+                int result = scale.Open(ini.ScaleLogicalName);
                 if (result != 0)
                 {
-                    Console.WriteLine($"Failed to open scale: {result}");
+                    Logger.Log($"Failed to open scale: {result}", MessageType.scale_error);
                     return false;
                 }
 
                 result = scale.ClaimDevice(1000);
                 if (result != 0)
                 {
-                    Console.WriteLine($"Failed to claim scale: {result}");
+                    Logger.Log($"Failed to claim scale: {result}", MessageType.scale_error);
                     return false;
                 }
 
@@ -137,14 +153,17 @@ namespace Zebra_Scanner_Scale_OPOS
                         scale.DeviceEnabled = true;
                         scale.DataEventEnabled = true;
 
-                        Console.WriteLine($"Scale max weight: {scale.MaximumWeight / 1000.0:F3} lbs");
+                        Logger.Log(
+                            $"Scale max weight: {scale.MaximumWeight / 1000.0:F3} lbs",
+                            MessageType.normal
+                        );
                         return true;
                     }
                 }
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Scale initialization error: {ex.Message}");
+                Logger.Log($"Scale initialization error: {ex.Message}", MessageType.scale_error);
             }
             return false;
         }
@@ -153,56 +172,57 @@ namespace Zebra_Scanner_Scale_OPOS
         {
             try
             {
-                Console.WriteLine($"\n[SCAN] {scanner.ScanDataLabel}");
+                Logger.Log($"\n[SCAN] {scanner.ScanDataLabel}", MessageType.scanner_error);
                 NamedPipesServer.SendDataToClient($"SCAN:{scanner.ScanDataLabel}");
 
                 scanner.DataEventEnabled = true;
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Scanner event error: {ex.Message}");
+                Logger.Log($"Scanner event error: {ex.Message}", MessageType.scanner_error);
             }
         }
 
-        static private void ScaleStatusUpdateEvent(int value)
+        private static void ScaleStatusUpdateEvent(int value)
         {
             int status = (int)scale.ResultCode;
 
             if (value == (int)OPOSScaleConstants.SCAL_SUE_STABLE_WEIGHT)
             {
-                Console.WriteLine(WeightFormat(scale.ScaleLiveWeight));
-                NamedPipesServer.pipeWriter?.WriteLine($"WEIGHT:{WeightFormat(scale.ScaleLiveWeight)}");
-
-
+                Logger.Log(WeightFormat(scale.ScaleLiveWeight), MessageType.consoleOnly);
+                NamedPipesServer.pipeWriter?.WriteLine(
+                    $"WEIGHT:{WeightFormat(scale.ScaleLiveWeight)}"
+                );
             }
             else if (value == (int)OPOSScaleConstants.SCAL_SUE_WEIGHT_UNSTABLE)
             {
-                Console.WriteLine("Scale weight unstable");
+                Logger.Log("Scale weight unstable", MessageType.scale_error);
             }
             else if (value == (int)OPOSScaleConstants.SCAL_SUE_WEIGHT_ZERO)
             {
-                Console.WriteLine(WeightFormat(scale.ScaleLiveWeight));
+                Logger.Log(WeightFormat(scale.ScaleLiveWeight), MessageType.consoleOnly);
                 NamedPipesServer.SendDataToClient($"WEIGHT:{WeightFormat(scale.ScaleLiveWeight)}");
             }
             else if (value == (int)OPOSScaleConstants.SCAL_SUE_WEIGHT_OVERWEIGHT)
             {
-                Console.WriteLine("Weight limit exceeded.");
+                Logger.Log("Weight limit exceeded.", MessageType.scale_error);
             }
             else if (value == (int)OPOSScaleConstants.SCAL_SUE_NOT_READY)
             {
-                Console.WriteLine("Scale not ready.");
+                Logger.Log("Scale not ready.", MessageType.scale_error);
             }
             else if (value == (int)OPOSScaleConstants.SCAL_SUE_WEIGHT_UNDER_ZERO)
             {
-                Console.WriteLine("Scale under zero weight.");
+                Logger.Log("Scale under zero weight.", MessageType.scale_error);
             }
             else
             {
-                Console.WriteLine("Unknown status [{0}]", value);
+                Logger.Log($"Unknown status [0]: {value}", MessageType.scale_error);
             }
         }
 
-        static private string WeightFormat(int weight)
+        //Helper function to format weight
+        private static string WeightFormat(int weight)
         {
             string weightStr = string.Empty;
 
@@ -220,16 +240,25 @@ namespace Zebra_Scanner_Scale_OPOS
             return weightStr;
         }
 
-        static private string UnitAbbreviation(int units)
+        //Helper function to get proper UOM from scale
+        private static string UnitAbbreviation(int units)
         {
             string unitStr = string.Empty;
 
             switch ((OPOSScaleConstants)units)
             {
-                case OPOSScaleConstants.SCAL_WU_GRAM: unitStr = "gr."; break;
-                case OPOSScaleConstants.SCAL_WU_KILOGRAM: unitStr = "kg."; break;
-                case OPOSScaleConstants.SCAL_WU_OUNCE: unitStr = "oz."; break;
-                case OPOSScaleConstants.SCAL_WU_POUND: unitStr = "lb."; break;
+                case OPOSScaleConstants.SCAL_WU_GRAM:
+                    unitStr = "gr.";
+                    break;
+                case OPOSScaleConstants.SCAL_WU_KILOGRAM:
+                    unitStr = "kg.";
+                    break;
+                case OPOSScaleConstants.SCAL_WU_OUNCE:
+                    unitStr = "oz.";
+                    break;
+                case OPOSScaleConstants.SCAL_WU_POUND:
+                    unitStr = "lb.";
+                    break;
             }
 
             return unitStr;
@@ -246,7 +275,7 @@ namespace Zebra_Scanner_Scale_OPOS
                     scanner.DeviceEnabled = false;
                     scanner.ReleaseDevice();
                     scanner.Close();
-                    Console.WriteLine("Scanner closed");
+                    Logger.Log("Scanner closed", MessageType.normal);
                 }
 
                 if (scale?.Claimed == true)
@@ -256,12 +285,12 @@ namespace Zebra_Scanner_Scale_OPOS
                     scale.DeviceEnabled = false;
                     scale.ReleaseDevice();
                     scale.Close();
-                    Console.WriteLine("Scale closed");
+                    Logger.Log("Scale closed", MessageType.normal);
                 }
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Cleanup error: {ex.Message}");
+                Logger.Log($"Cleanup error: {ex.Message}", MessageType.misc);
             }
         }
     }
