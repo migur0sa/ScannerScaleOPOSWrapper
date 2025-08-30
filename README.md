@@ -73,8 +73,11 @@ SCALE_ENABLED=1
 
 ---
 
-## 📓 Notes:
+## ⬇️ Windows Installer:
 
-The Windows installer can be found under the "releases". The application must be "Run as Administrator" to work properly. Future versions will run as a Windows Service. Currently, since there might be bugs, it will run as a console program. If running it as a service is necessary, it can be run using NSSM or a similar tool to function as a service.
+[Download](https://github.com/migur0sa/ScannerScaleOPOSWrapper/releases)
+
+**Notes:**
+***The application must be "Run as Administrator" to work properly. Future versions will run as a Windows Service. Currently, since there might be bugs, it will run as a console program. If running it as a service is necessary, it can be run using NSSM or a similar tool to function as a service.***
 
 ---
