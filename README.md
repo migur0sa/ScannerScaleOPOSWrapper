@@ -4,7 +4,7 @@ A lightweight C# program that interfaces with scanners and scanner/scale devices
 
 ---
 
-## 🚀 Features
+## 🚀 Features:
 
 - ✅ Connects to scanner or scanner/scales via OPOS (Zebra MP7001 tested)
 - ✅ Streams live weight updates and barcode scans
@@ -44,7 +44,27 @@ with open(pipe_name, 'r') as pipe:
   
 ---
 
-## 🛠 Requirements to build
+## ⛏️ Settings.ini:
+
+There is a Settings.ini file, which controls the logical device name, scale enable, and debug mode. 
+
+This file is located in the installation folder "C:\Program Files (x86)\Scanner Scale OPOS Wrapper".
+
+```
+[GENERAL]
+DEBUG=1
+SCANNER_NAME=ZEBRA_SCANNER
+SCALE_NAME=ZEBRA_SCALE
+SCALE_ENABLED=1
+
+;DEBUG=1 enables (1) or disables (0) output of debug information to the console.
+;ScannerName is the name of the scanner device to use.
+;ScaleName is the name of the scale device to use.
+;ScaleEnabled enables (1) or disables (0) the scale functionality.
+;ScannerScaleOPOSPipe is the default name of the pipe used to communicate with the OPOS service.
+```
+
+## 🛠 Requirements to Build:
 
 - Windows OS
 - .NET Framework 4.7.2+
