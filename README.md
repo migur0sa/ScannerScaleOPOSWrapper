@@ -23,7 +23,7 @@ pipe_name = r'\\.\pipe\ScannerScaleOPOSPipe'
 
 with open(pipe_name, 'r') as pipe:
     while True:
-        line = pipe.readline().strip()
+        line = pipe.readline().replace("ï»¿", "").strip()
         if line:
             print({line})
 ```
