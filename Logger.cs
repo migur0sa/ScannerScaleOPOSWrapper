@@ -18,8 +18,39 @@ namespace Scanner_Scale_OPOS_Wrapper
         {
             lock (_lockObject)
             {
+                
                 string dateTime = DateTime.Now.ToString();
-                string path = @".\\log.txt";
+                string dateOnly = DateTime.Now.ToString("yyyy-MM-dd");
+                string path = $".\\Logs\\log_{dateOnly}.txt";
+
+                // Ensure the Logs directory exists
+                if (!Directory.Exists(".\\Logs"))
+                {
+                    Directory.CreateDirectory(".\\Logs");
+                }
+
+                // Delete log files older than 7 days
+                for (int i = 1; i < 8; i++)
+                {
+                    string oldLogPath = $".\\Logs\\log_{DateTime.Now.AddDays(-i).ToString("yyyy-MM-dd")}.txt";
+                    if (File.Exists(oldLogPath))
+                    {
+                        try
+                        {
+                            File.Delete(oldLogPath);
+                        }
+                        catch (Exception ex)
+                        {
+                            // If deletion fails, log the error to the current log file
+                            File.AppendAllLines(
+                                $".\\log_{dateOnly}.txt",
+                                new[] { $"{dateTime} - ERROR DELETING OLD LOG FILE - {ex.Message}" }
+                            );
+                        }
+                    }
+                }
+
+                
                 switch (messageType)
                 {
                     case MessageType.normal:
