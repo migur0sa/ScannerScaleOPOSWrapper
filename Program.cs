@@ -4,20 +4,46 @@ using System.Threading;
 using OPOSCONSTANTSLib;
 using OposScale_CCO;
 using OposScanner_CCO;
+using System.Runtime.InteropServices;
 using static Scanner_Scale_OPOS_Wrapper.Constants;
 
 namespace Scanner_Scale_OPOS_Wrapper
 {
     class Program
     {
+
+        [DllImport("kernel32.dll")]
+        static extern IntPtr GetConsoleWindow();
+
+        [DllImport("user32.dll")]
+        static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
+
+        private const int SW_HIDE = 0;
+
         private static OPOSScanner scanner;
         private static OPOSScale scale;
 
         static void Main(string[] args)
         {
+
             // Read INI configuration
             INI ini = new INI();
             Logger.debug = ini.Debug;
+
+
+            // Get the handle for the current console window
+            IntPtr handle = GetConsoleWindow();
+
+            if(ini.Debug == 1)
+            {
+                // Show the console window
+                ShowWindow(handle, 5); // 5 = SW_SHOW
+            }
+            else
+            {
+                // Hide the console window
+                ShowWindow(handle, SW_HIDE);
+            }
 
             var exitEvent = new ManualResetEvent(false);
             Console.CancelKeyPress += (sender, eventArgs) =>
